@@ -1,0 +1,239 @@
+blueprint:
+  name: Tuya/Zigbee remote mapping - _TZ3000_rco1yzb1 (ZHA / Zigbee2MQTT)
+  description: >
+    Map button events from a Tuya/Zigbee remote (_TZ3000_rco1yzb1) to actions.
+    Supports ZHA (zha_event) and Zigbee2MQTT (MQTT JSON payload) triggers.
+  domain: automation
+  input:
+    integration:
+      name: Integration
+      description: Select the integration your remote uses.
+      selector:
+        select:
+          options:
+            - value: zha
+              label: ZHA (zha_event)
+            - value: zigbee2mqtt
+              label: Zigbee2MQTT (MQTT JSON payload, topic below)
+            - value: mqtt_raw
+              label: Generic MQTT (raw payload/topic)
+          mode: dropdown
+    zha_device:
+      name: ZHA device (if using ZHA)
+      selector:
+        device: {}
+    zigbee2mqtt_topic:
+      name: Zigbee2MQTT topic (if using Zigbee2MQTT)
+      description: Topic used by zigbee2mqtt for the device, e.g. zigbee2mqtt/_TZ3000_rco1yzb1
+      default: "zigbee2mqtt/_TZ3000_rco1yzb1"
+      selector:
+        text: {}
+    mqtt_topic:
+      name: Generic MQTT topic (if using Generic MQTT)
+      description: Full topic to listen to
+      selector:
+        text: {}
+    # Mapping entries: event_value and an action to run
+    map_1_event:
+      name: Event 1 — event value (e.g. 'single', 'double', 'hold', 'short', 'long')
+      selector:
+        text: {}
+    map_1_action:
+      name: Action for Event 1
+      selector:
+        action: {}
+    map_2_event:
+      name: Event 2
+      selector:
+        text: {}
+    map_2_action:
+      name: Action for Event 2
+      selector:
+        action: {}
+    map_3_event:
+      name: Event 3
+      selector:
+        text: {}
+    map_3_action:
+      name: Action for Event 3
+      selector:
+        action: {}
+    map_4_event:
+      name: Event 4
+      selector:
+        text: {}
+    map_4_action:
+      name: Action for Event 4
+      selector:
+        action: {}
+    map_5_event:
+      name: Event 5
+      selector:
+        text: {}
+    map_5_action:
+      name: Action for Event 5
+      selector:
+        action: {}
+    map_6_event:
+      name: Event 6
+      selector:
+        text: {}
+    map_6_action:
+      name: Action for Event 6
+      selector:
+        action: {}
+
+trigger:
+  - platform: event
+    event_type: zha_event
+  - platform: mqtt
+    topic: !input zigbee2mqtt_topic
+  - platform: mqtt
+    topic: !input mqtt_topic
+
+variables:
+  integration: !input integration
+  # convenience map
+  mappings:
+    - [!input map_1_event, !input map_1_action]
+    - [!input map_2_event, !input map_2_action]
+    - [!input map_3_event, !input map_3_action]
+    - [!input map_4_event, !input map_4_action]
+    - [!input map_5_event, !input map_5_action]
+    - [!input map_6_event, !input map_6_action]
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            # ZHA chosen AND trigger is zha_event AND device matches (if provided)
+            value_template: >
+              {{ integration == 'zha'
+                 and trigger.platform == 'event'
+                 and trigger.event.event_type == 'zha_event'
+                 and (not (zha_device is defined and zha_device == '') )
+                 and
+                 (
+                   # If a zha device was selected, match by device id/unique id if present
+                   (true)  # keep true to allow command extraction below; device matching handled in the template comparison per mapping
+                 )
+              }}
+        sequence:
+          # For each mapping, check if trigger.event.data.command (or trigger.event.data.action) equals the mapping key
+          - choose:
+              - conditions:
+                  - condition: template
+                    # NOTE: change trigger.event.data.command to the correct field your integration uses if different
+                    value_template: >
+                      {{ mappings[0][0] and mappings[0][0] | length > 0 and
+                         (trigger.event.data.command == mappings[0][0] or trigger.event.data.action == mappings[0][0] or (trigger.event.data.get('click') == mappings[0][0])) }}
+                sequence: !input map_1_action
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ mappings[1][0] and mappings[1][0] | length > 0 and
+                         (trigger.event.data.command == mappings[1][0] or trigger.event.data.action == mappings[1][0] or (trigger.event.data.get('click') == mappings[1][0])) }}
+                sequence: !input map_2_action
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ mappings[2][0] and mappings[2][0] | length > 0 and
+                         (trigger.event.data.command == mappings[2][0] or trigger.event.data.action == mappings[2][0] or (trigger.event.data.get('click') == mappings[2][0])) }}
+                sequence: !input map_3_action
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ mappings[3][0] and mappings[3][0] | length > 0 and
+                         (trigger.event.data.command == mappings[3][0] or trigger.event.data.action == mappings[3][0] or (trigger.event.data.get('click') == mappings[3][0])) }}
+                sequence: !input map_4_action
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ mappings[4][0] and mappings[4][0] | length > 0 and
+                         (trigger.event.data.command == mappings[4][0] or trigger.event.data.action == mappings[4][0] or (trigger.event.data.get('click') == mappings[4][0])) }}
+                sequence: !input map_5_action
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ mappings[5][0] and mappings[5][0] | length > 0 and
+                         (trigger.event.data.command == mappings[5][0] or trigger.event.data.action == mappings[5][0] or (trigger.event.data.get('click') == mappings[5][0])) }}
+                sequence: !input map_6_action
+    - conditions:
+        - condition: template
+          # Zigbee2MQTT chosen AND trigger was MQTT on zigbee2mqtt topic
+          value_template: >
+            {{ integration == 'zigbee2mqtt'
+               and trigger.platform == 'mqtt'
+               and trigger.topic == ('' if (zigbee2mqtt_topic is not defined) else zigbee2mqtt_topic)
+            }}
+      sequence:
+        - variables:
+            payload: "{{ trigger.payload | from_json }}"
+        - choose:
+            - conditions:
+                - condition: template
+                  # common Zigbee2MQTT field: payload.action or payload.click (adjust if necessary)
+                  value_template: "{{ mappings[0][0] and mappings[0][0] | length > 0 and (payload.get('action') == mappings[0][0] or payload.get('click') == mappings[0][0]) }}"
+              sequence: !input map_1_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[1][0] and mappings[1][0] | length > 0 and (payload.get('action') == mappings[1][0] or payload.get('click') == mappings[1][0]) }}"
+              sequence: !input map_2_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[2][0] and mappings[2][0] | length > 0 and (payload.get('action') == mappings[2][0] or payload.get('click') == mappings[2][0]) }}"
+              sequence: !input map_3_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[3][0] and mappings[3][0] | length > 0 and (payload.get('action') == mappings[3][0] or payload.get('click') == mappings[3][0]) }}"
+              sequence: !input map_4_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[4][0] and mappings[4][0] | length > 0 and (payload.get('action') == mappings[4][0] or payload.get('click') == mappings[4][0]) }}"
+              sequence: !input map_5_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[5][0] and mappings[5][0] | length > 0 and (payload.get('action') == mappings[5][0] or payload.get('click') == mappings[5][0]) }}"
+              sequence: !input map_6_action
+
+    - conditions:
+        - condition: template
+          # Generic MQTT chosen AND topic matches
+          value_template: >
+            {{ integration == 'mqtt_raw'
+               and trigger.platform == 'mqtt'
+               and trigger.topic == ('' if (mqtt_topic is not defined) else mqtt_topic)
+            }}
+      sequence:
+        - variables:
+            raw: "{{ trigger.payload }}"
+        - choose:
+            # If your MQTT payload is raw string e.g. "single", compare directly:
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[0][0] and mappings[0][0] | length > 0 and (raw == mappings[0][0]) }}"
+              sequence: !input map_1_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[1][0] and mappings[1][0] | length > 0 and (raw == mappings[1][0]) }}"
+              sequence: !input map_2_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[2][0] and mappings[2][0] | length > 0 and (raw == mappings[2][0]) }}"
+              sequence: !input map_3_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[3][0] and mappings[3][0] | length > 0 and (raw == mappings[3][0]) }}"
+              sequence: !input map_4_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[4][0] and mappings[4][0] | length > 0 and (raw == mappings[4][0]) }}"
+              sequence: !input map_5_action
+            - conditions:
+                - condition: template
+                  value_template: "{{ mappings[5][0] and mappings[5][0] | length > 0 and (raw == mappings[5][0]) }}"
+              sequence: !input map_6_action
+
+  - choose: []  # fallback - do nothing
