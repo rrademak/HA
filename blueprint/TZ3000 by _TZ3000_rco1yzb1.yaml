@@ -1,66 +1,79 @@
 blueprint:
   name: Tuya Remote _TZ3000_rco1yzb1 (ZHA)
-  description: Map ZHA events for Tuya remote _TZ3000_rco1yzb1 to actions
+  description: Map ZHA events for Tuya remote _TZ3000_rco1yzb1 to actions.
   domain: automation
 
   input:
     device:
       name: ZHA Device
+      description: Select your _TZ3000_rco1yzb1 device
       selector:
         device:
           integration: zha
 
     event_1:
-      name: Event 1 value (e.g. "single", "double", "hold")
+      name: Event 1
+      default: ""
       selector:
         text: {}
     action_1:
       name: Action 1
+      default: []
       selector:
         action: {}
 
     event_2:
-      name: Event 2 value
+      name: Event 2
+      default: ""
       selector:
         text: {}
     action_2:
       name: Action 2
+      default: []
       selector:
         action: {}
 
     event_3:
-      name: Event 3 value
+      name: Event 3
+      default: ""
       selector:
         text: {}
     action_3:
       name: Action 3
+      default: []
       selector:
         action: {}
 
     event_4:
-      name: Event 4 value
+      name: Event 4
+      default: ""
       selector:
         text: {}
     action_4:
       name: Action 4
+      default: []
       selector:
         action: {}
 
     event_5:
-      name: Event 5 value
+      name: Event 5
+      default: ""
       selector:
         text: {}
     action_5:
       name: Action 5
+      default: []
       selector:
         action: {}
 
     event_6:
-      name: Event 6 value
+      name: Event 6
+      default: ""
       selector:
         text: {}
     action_6:
       name: Action 6
+      default: []
       selector:
         action: {}
 
@@ -85,20 +98,20 @@ variables:
 
 action:
   - choose:
-      - conditions: "{{ event_value == ev1 }}"
+      - conditions: "{{ ev1 != '' and event_value == ev1 }}"
         sequence: !input action_1
 
-      - conditions: "{{ event_value == ev2 }}"
+      - conditions: "{{ ev2 != '' and event_value == ev2 }}"
         sequence: !input action_2
 
-      - conditions: "{{ event_value == ev3 }}"
+      - conditions: "{{ ev3 != '' and event_value == ev3 }}"
         sequence: !input action_3
 
-      - conditions: "{{ event_value == ev4 }}"
+      - conditions: "{{ ev4 != '' and event_value == ev4 }}"
         sequence: !input action_4
 
-      - conditions: "{{ event_value == ev5 }}"
+      - conditions: "{{ ev5 != '' and event_value == ev5 }}"
         sequence: !input action_5
 
-      - conditions: "{{ event_value == ev6 }}"
+      - conditions: "{{ ev6 != '' and event_value == ev6 }}"
         sequence: !input action_6
