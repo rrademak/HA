@@ -1,15 +1,100 @@
-alias: Battery Management (smart discharge)
-description: Adjust Indevolt discharge based on grid import/export and solar forecast
+blueprint:
+  name: Battery Management (smart discharge)
+  description: >-
+    Dynamically adjust battery discharge based on grid import/export,
+    remaining solar production and battery SOC.
+  domain: automation
+
+  input:
+    net_power:
+      name: Meter - Netto power (W)
+      selector:
+        entity:
+          domain: sensor
+
+    production_remaining:
+      name: PV Forecast - Remaining production today (kWh)
+      selector:
+        entity:
+          domain: sensor
+
+    night_threshold:
+      name: PV Forecast - Threshold for night mode (kWh)
+      default: 0.25
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 0.05
+          unit_of_measurement: kWh
+          mode: slider
+
+    battery_soc:
+      name: Battery - Current SOC
+      selector:
+        entity:
+          domain: sensor
+
+    ac_output_limit:
+      name: Battery - AC output limit
+      selector:
+        entity:
+          domain: number
+
+    import_threshold:
+      name: Import threshold for allowing discharge (W)
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 3000
+          step: 100
+          unit_of_measurement: W
+          mode: slider
+
+    export_threshold:
+      name: Export threshold for disallowing discharge (W)
+      default: 0
+      selector:
+        number:
+          min: -1000
+          max: 0
+          step: 50
+          unit_of_measurement: W
+          mode: slider
+
+    minimum_soc:
+      name: Minimum SOC for daytime discharge (%)
+      default: 75
+      selector:
+        number:
+          min: 10
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: slider
+
+    discharge_power:
+      name: Discharge power when importing (W)
+      default: 800
+      selector:
+        number:
+          min: 0
+          max: 2400
+          step: 100
+          unit_of_measurement: W
+          mode: slider
+
 triggers:
   - trigger: numeric_state
-    entity_id: sensor.p1_meter_3c39e72eea50_active_power
-    above: 500
+    entity_id: !input net_power
+    above: !input import_threshold
     for: "00:01:00"
     id: import
 
   - trigger: numeric_state
-    entity_id: sensor.p1_meter_3c39e72eea50_active_power
-    below: 0
+    entity_id: !input net_power
+    below: !input export_threshold
     for: "00:01:00"
     id: export
 
@@ -17,10 +102,15 @@ conditions: []
 
 actions:
   - variables:
-      current_limit: "{{ states('number.indevolt_cms_sf2000_max_ac_output_power') | float(0) }}"
-      max_power: 800
-      production_remaining: "{{ states('sensor.REPLACE_WITH_FORECAST_ENTITY') | float(0) }}"
-      battery_soc: "{{ states('sensor.indevolt_cms_sf2000_battery_soc') | float(0) }}"
+      ac_limit_entity: !input ac_output_limit
+      forecast_entity: !input production_remaining
+      soc_entity: !input battery_soc
+      current_limit: "{{ states(ac_limit_entity) | float(0) }}"
+      max_power: !input discharge_power
+      production_remaining_value: "{{ states(forecast_entity) | float(0) }}"
+      battery_soc_value: "{{ states(soc_entity) | float(0) }}"
+      forecast_threshold: !input night_threshold
+      minimum_soc_value: !input minimum_soc
 
   - choose:
       - conditions:
@@ -31,19 +121,22 @@ actions:
           - condition: or
             conditions:
               - condition: template
-                value_template: "{{ production_remaining < 0.25 }}"
+                value_template: >
+                  {{ production_remaining_value < forecast_threshold }}
               - condition: and
                 conditions:
                   - condition: template
-                    value_template: "{{ production_remaining > 0.25 }}"
+                    value_template: >
+                      {{ production_remaining_value > forecast_threshold }}
                   - condition: template
-                    value_template: "{{ battery_soc > 75 }}"
+                    value_template: >
+                      {{ battery_soc_value > minimum_soc_value }}
         sequence:
           - action: number.set_value
             target:
-              entity_id: number.indevolt_cms_sf2000_max_ac_output_power
+              entity_id: !input ac_output_limit
             data:
-              value: 800
+              value: !input discharge_power
 
       - conditions:
           - condition: trigger
@@ -53,7 +146,7 @@ actions:
         sequence:
           - action: number.set_value
             target:
-              entity_id: number.indevolt_cms_sf2000_max_ac_output_power
+              entity_id: !input ac_output_limit
             data:
               value: 0
 
