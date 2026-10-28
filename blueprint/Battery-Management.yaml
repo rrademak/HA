@@ -1,0 +1,60 @@
+alias: Battery Management (smart discharge)
+description: Adjust Indevolt discharge based on grid import/export and solar forecast
+triggers:
+  - trigger: numeric_state
+    entity_id: sensor.p1_meter_3c39e72eea50_active_power
+    above: 500
+    for: "00:01:00"
+    id: import
+
+  - trigger: numeric_state
+    entity_id: sensor.p1_meter_3c39e72eea50_active_power
+    below: 0
+    for: "00:01:00"
+    id: export
+
+conditions: []
+
+actions:
+  - variables:
+      current_limit: "{{ states('number.indevolt_cms_sf2000_max_ac_output_power') | float(0) }}"
+      max_power: 800
+      production_remaining: "{{ states('sensor.REPLACE_WITH_FORECAST_ENTITY') | float(0) }}"
+      battery_soc: "{{ states('sensor.indevolt_cms_sf2000_battery_soc') | float(0) }}"
+
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: import
+          - condition: template
+            value_template: "{{ current_limit != max_power }}"
+          - condition: or
+            conditions:
+              - condition: template
+                value_template: "{{ production_remaining < 0.25 }}"
+              - condition: and
+                conditions:
+                  - condition: template
+                    value_template: "{{ production_remaining > 0.25 }}"
+                  - condition: template
+                    value_template: "{{ battery_soc > 75 }}"
+        sequence:
+          - action: number.set_value
+            target:
+              entity_id: number.indevolt_cms_sf2000_max_ac_output_power
+            data:
+              value: 800
+
+      - conditions:
+          - condition: trigger
+            id: export
+          - condition: template
+            value_template: "{{ current_limit != 0 }}"
+        sequence:
+          - action: number.set_value
+            target:
+              entity_id: number.indevolt_cms_sf2000_max_ac_output_power
+            data:
+              value: 0
+
+mode: single
